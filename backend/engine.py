@@ -1,9 +1,8 @@
-# backend/engine.py
-
 import logging
 import time
 import threading
 import asyncio
+import os
 from datetime import datetime
 from difflib import SequenceMatcher
 
@@ -17,8 +16,9 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(level
 class MainApplication:
     """The main application orchestrating all components."""
     
-    def __init__(self, socketio_instance=None):
+    def __init__(self, socketio_instance=None, upload_folder=None):
         self.socketio = socketio_instance 
+        self.upload_folder = upload_folder
         self.config = database.load_settings()
         self._init_settings()
         
@@ -53,8 +53,16 @@ class MainApplication:
     def _init_settings(self):
         self.tiktok_username = self.config.get("tiktok_username")
         self.product_list = self.config.get("product_list", [])
-        self.product_to_scene_map = self.config.get("product_to_scene_map", {})
+        
+        # IMPORTANT: 'scene' in database now maps to FILENAME
+        self.product_to_video_map = {p['name']: p['scene'] for p in self.config.get('products', [])}
+        
         self.main_scene_name = self.config.get("main_scene_name", "Scene_A")
+        
+        # --- FIXED OBS CONFIGURATION ---
+        # The user only needs 1 scene and 1 media source in OBS
+        self.product_scene_name = "Product_View"
+        self.media_source_name = "Dynamic_Media"
         
         self.reconnect_delay = int(self.config.get("tiktok_reconnect_delay", 30))
         self.deepseek_api_key = self.config.get("deepseek_api_key")
@@ -64,11 +72,6 @@ class MainApplication:
         self.obs_password = self.config.get("obs_ws_password", "")
         
         self.rate_limit = int(self.config.get("comment_rate_limit", 2))
-        
-        self.video_scenes = {
-            scene for scene in self.product_to_scene_map.values() 
-            if scene != self.main_scene_name
-        }
 
     # --- WEBSOCKET HELPERS ---
     def emit_log(self, type, message, user=None):
@@ -99,9 +102,10 @@ class MainApplication:
                 self.auto_return_timer = None
             
             try:
+                # If we are currently in the Product View scene, go back to Main
                 current_scene = self.obs.get_current_scene()
-                if current_scene in self.video_scenes:
-                    msg = f"✓ Video ended in '{current_scene}'. Returning to '{self.main_scene_name}'."
+                if current_scene == self.product_scene_name:
+                    msg = f"✓ Video ended. Returning to '{self.main_scene_name}'."
                     self.emit_log('system', msg)
                     self.obs.switch_to_scene(self.main_scene_name)
             except Exception as e:
@@ -132,6 +136,7 @@ class MainApplication:
     def _handle_product_request(self, product_name):
         if not product_name: return
 
+        # Fuzzy Match
         best_match = None
         highest_score = 0
         for official_name in self.product_list:
@@ -143,31 +148,48 @@ class MainApplication:
         if highest_score < 0.5 or not best_match:
             return
 
+        # Rate Limit
         now = time.time()
         self.rate_limit_timestamps = [t for t in self.rate_limit_timestamps if now - t < 60]
         
         if len(self.rate_limit_timestamps) < self.rate_limit:
-            scene = self.product_to_scene_map.get(best_match)
-            if scene:
-                self.emit_log('system', f"AI detected intent for '{best_match}'. Switching to '{scene}'.")
+            
+            # --- VIDEO SWAP LOGIC ---
+            video_filename = self.product_to_video_map.get(best_match)
+            
+            if video_filename:
+                # Construct full path
+                video_path = os.path.join(self.upload_folder, video_filename)
                 
-                if self.obs.switch_to_scene(scene):
-                    self.stats['scenes_switched'] += 1
-                    self.rate_limit_timestamps.append(now)
-                    self.emit_stats()
-                    
-                    if self.auto_return_timer: self.auto_return_timer.cancel()
-                    self.auto_return_timer = threading.Timer(self.auto_return_delay, self._backup_return_to_main)
-                    self.auto_return_timer.daemon = True
-                    self.auto_return_timer.start()
-                    self.emit_log('system', f"⏱️ Backup auto-return set for {self.auto_return_delay}s")
+                self.emit_log('system', f"AI detected '{best_match}'. Loading video: {video_filename}")
+                
+                # 1. Swap the media source file
+                media_swapped = self.obs.set_media_source_file(self.media_source_name, video_path)
+                
+                if media_swapped:
+                    # 2. Switch scene
+                    if self.obs.switch_to_scene(self.product_scene_name):
+                        self.stats['scenes_switched'] += 1
+                        self.rate_limit_timestamps.append(now)
+                        self.emit_stats()
+                        
+                        # 3. Backup timer
+                        if self.auto_return_timer: self.auto_return_timer.cancel()
+                        self.auto_return_timer = threading.Timer(self.auto_return_delay, self._backup_return_to_main)
+                        self.auto_return_timer.daemon = True
+                        self.auto_return_timer.start()
+                        self.emit_log('system', f"⏱️ Playing video. Backup return in {self.auto_return_delay}s")
+                else:
+                    self.emit_log('system', f"Failed to set media source '{self.media_source_name}'.")
+            else:
+                self.emit_log('system', f"No video mapped for product '{best_match}'.")
         else:
             self.emit_log('system', f"Rate limit hit. Ignoring request for '{best_match}'.")
     
     def _backup_return_to_main(self):
         try:
             current_scene = self.obs.get_current_scene()
-            if current_scene in self.video_scenes:
+            if current_scene == self.product_scene_name:
                 self.emit_log('system', f"⚠️ Backup timer: Returning to '{self.main_scene_name}'")
                 self.obs.switch_to_scene(self.main_scene_name)
         except Exception as e:
@@ -184,15 +206,9 @@ class MainApplication:
                 self.current_listener = TikTokListener(self.tiktok_username, self.process_comment)
                 self.emit_log('system', f"Connecting to TikTok user: {self.tiktok_username}")
                 self.current_listener.run() 
-                
-                # If run() returns, it usually means we disconnected
                 retry_count = 0 
-                
             except Exception as e:
-                # IMPORTANT: If we are stopping, ignore the error and break
-                if self.stop_event.is_set():
-                    break
-                    
+                if self.stop_event.is_set(): break
                 self.emit_log('system', f"Connection Error: {e}")
                 self.stats['errors'] += 1
                 self.emit_stats()
@@ -202,15 +218,11 @@ class MainApplication:
                     except: pass
                 self.current_listener = None
 
-            # IMPORTANT: Check stop event BEFORE waiting to reconnect
-            if self.stop_event.is_set():
-                break
+            if self.stop_event.is_set(): break
 
             retry_count += 1
             wait_time = 5 if retry_count <= 2 else self.reconnect_delay
             self.emit_log('system', f"Disconnected. Retrying in {wait_time}s...")
-            
-            # Sleep in small chunks to allow faster stopping
             for _ in range(wait_time):
                 if self.stop_event.is_set(): break
                 time.sleep(1)
@@ -232,18 +244,14 @@ class MainApplication:
 
     def stop(self):
         self.emit_log('system', "Stopping bot...")
-        self.stop_event.set() # 1. Signal threads to stop
+        self.stop_event.set()
         
         if self.auto_return_timer:
             self.auto_return_timer.cancel()
         
-        # 2. Force TikTok client to stop if it exists
         if self.current_listener:
-            try: 
-                # This breaks the blocking .run() loop
-                self.current_listener.client.stop() 
-            except Exception as e: 
-                logging.error(f"Error forcing TikTok stop: {e}")
+            try: self.current_listener.client.stop() 
+            except: pass
         
         self.obs.disconnect()
         self.emit_log('system', "Bot stopped successfully.")

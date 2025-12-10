@@ -1,7 +1,6 @@
-# backend/obs_controller.py
-
 import obsws_python as obs
 import logging
+import os
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
@@ -51,7 +50,6 @@ class OBSController:
             self.event_client = None
             logging.error(f"Failed to connect to OBS WebSocket: {e}")
             logging.error("--> Is OBS running? Is the WebSocket Server enabled?")
-            logging.error(f"--> Check host={self.host}, port={self.port}")
             return False
     
     def _on_media_input_playback_ended(self, event_data):
@@ -91,7 +89,7 @@ class OBSController:
         """Requests OBS to switch to a specific scene."""
         if not self.req_client:
             logging.warning("Not connected to OBS. Cannot switch scene.")
-            return
+            return False
         
         try:
             scene_list_response = self.req_client.get_scene_list()
@@ -101,18 +99,19 @@ class OBSController:
                 if scene_name in available_scenes:
                     self.req_client.set_current_program_scene(scene_name)
                     logging.info(f"✓ Successfully switched OBS scene to '{scene_name}'.")
+                    return True
                 else:
                     logging.warning(f"✗ Scene '{scene_name}' not found in OBS.")
                     logging.warning(f"Available scenes: {available_scenes}")
-            else:
-                logging.error("Could not get a valid scene list from OBS.")
+                    return False
+            return False
         except Exception as e:
             logging.error(f"An error occurred while switching scenes: {e}")
+            return False
     
     def get_current_scene(self):
         """Gets the current active scene name."""
         if not self.req_client:
-            logging.warning("Not connected to OBS. Cannot get current scene.")
             return None
         
         try:
@@ -121,50 +120,26 @@ class OBSController:
         except Exception as e:
             logging.error(f"Error getting current scene: {e}")
             return None
-    
-    def get_media_input_status(self, source_name: str):
-        """Gets the status of a media source."""
+
+    def set_media_source_file(self, source_name, file_path):
+        """Updates a Media Source to play a specific video file."""
         if not self.req_client:
-            return None
-        
+            logging.error("OBS not connected.")
+            return False
         try:
-            response = self.req_client.get_media_input_status(source_name)
-            return response
+            # OBS requires absolute paths
+            abs_path = os.path.abspath(file_path)
+            logging.info(f"Setting OBS Source '{source_name}' to file: {abs_path}")
+            
+            # Check if source exists (optional but good practice, skipping for speed)
+            
+            # 'local_file' is the standard setting key for VLC Source or Media Source
+            self.req_client.set_input_settings(
+                name=source_name,
+                settings={"local_file": abs_path},
+                overlay=True
+            )
+            return True
         except Exception as e:
-            logging.error(f"Error getting media status for '{source_name}': {e}")
-            return None
-
-
-# Test block
-if __name__ == '__main__':
-    def test_callback(event):
-        print(f"TEST: Received event: {event.event_type}")
-        print(f"TEST: Event data: {event.event_data}")
-    
-    print("="*60)
-    print("Testing OBS Controller with Event Handling")
-    print("="*60)
-    
-    obs_ctrl = OBSController(event_callback=test_callback)
-    
-    if obs_ctrl.connect():
-        print("\n✓ Connected to OBS successfully!")
-        
-        # Get current scene
-        current = obs_ctrl.get_current_scene()
-        print(f"✓ Current scene: {current}")
-        
-        print("\nNow play a media source in OBS and watch for the event...")
-        print("Press Ctrl+C to stop testing")
-        
-        try:
-            import time
-            while True:
-                time.sleep(1)
-        except KeyboardInterrupt:
-            print("\n\nStopping test...")
-    else:
-        print("\n✗ Failed to connect to OBS")
-    
-    obs_ctrl.disconnect()
-    print("Test completed.")
+            logging.error(f"Failed to set media file for source '{source_name}': {e}")
+            return False

@@ -1,5 +1,3 @@
-// frontend/static/js/script.js
-
 document.addEventListener("DOMContentLoaded", () => {
   // --- THEME MANAGEMENT ---
   const initTheme = () => {
@@ -10,14 +8,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const updateThemeIcon = (theme) => {
     const icon = document.getElementById("themeIcon");
-    if (theme === "light") {
-      // Sun icon for light mode (click to switch to dark)
-      icon.innerHTML =
-        '<circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>';
-    } else {
-      // Moon icon for dark mode (click to switch to light)
-      icon.innerHTML =
-        '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>';
+    if (icon) {
+      if (theme === "light") {
+        icon.innerHTML =
+          '<circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>';
+      } else {
+        icon.innerHTML =
+          '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>';
+      }
     }
   };
 
@@ -31,12 +29,13 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   const themeToggleBtn = document.getElementById("themeToggleBtn");
-  themeToggleBtn.addEventListener("click", toggleTheme);
+  if (themeToggleBtn) {
+    themeToggleBtn.addEventListener("click", toggleTheme);
+  }
 
   initTheme();
 
-  // Connect to WebSocket
-  // Make sure the Socket.IO client script is loaded in your HTML
+  // --- WEBSOCKET CONNECT ---
   const socket = io();
 
   // --- STATE ---
@@ -44,8 +43,9 @@ document.addEventListener("DOMContentLoaded", () => {
     products: [],
     isRunning: false,
   };
+  let availableVideos = [];
 
-  // --- SELECTORS ---
+  // --- DOM ELEMENTS ---
   const sidebar = document.querySelector(".sidebar");
   const pages = document.querySelectorAll(".page");
   const startButton = document.getElementById("startButton");
@@ -57,7 +57,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const modalContainer = document.getElementById("modalContainer");
   const toastContainer = document.getElementById("toastContainer");
 
-  // Log Containers
   const chatLogContent = document.getElementById("chatLogContent");
   const actionLogContent = document.getElementById("actionLogContent");
 
@@ -66,17 +65,71 @@ document.addEventListener("DOMContentLoaded", () => {
     "product-modal-template"
   );
 
+  // Gallery Elements
+  const galleryGrid = document.getElementById("galleryGrid");
+  const videoUploadInput = document.getElementById("videoUploadInput");
+
+  // --- GALLERY FUNCTIONS ---
+  const loadGallery = async () => {
+    try {
+      const res = await fetch("/api/media");
+      availableVideos = await res.json();
+      renderGallery();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const renderGallery = () => {
+    if (!galleryGrid) return;
+    galleryGrid.innerHTML = "";
+    availableVideos.forEach((filename) => {
+      const card = document.createElement("div");
+      card.className = "card";
+      card.style.overflow = "hidden";
+      card.innerHTML = `
+            <div style="position: relative;">
+                <video src="/media/${filename}" controls style="width: 100%; height: 120px; object-fit: cover; background:#000;"></video>
+                <div style="padding: 0.5rem; font-size: 0.8rem; word-break: break-all; font-weight: 500;">${filename}</div>
+            </div>
+        `;
+      galleryGrid.appendChild(card);
+    });
+  };
+
+  if (videoUploadInput) {
+    videoUploadInput.addEventListener("change", async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const formData = new FormData();
+      formData.append("file", file);
+
+      showToast("Uploading...", "info");
+      try {
+        const res = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        });
+        const data = await res.json();
+        if (data.status === "success") {
+          showToast("Upload complete");
+          loadGallery();
+        } else {
+          showToast(data.message, "error");
+        }
+      } catch (e) {
+        showToast("Upload failed", "error");
+      }
+    });
+  }
+
   // --- WEBSOCKET LISTENERS ---
+  socket.on("connect", () => console.log("WebSocket connected!"));
 
-  socket.on("connect", () => {
-    console.log("WebSocket connected!");
-  });
-
-  // Receive Chat/System Logs Instantly
   socket.on("new_log", (log) => {
     const entry = document.createElement("div");
     entry.className = "log-entry";
-
     if (log.type === "chat") {
       entry.innerHTML = `<span class="user">${log.user}:</span> ${log.message}`;
       chatLogContent.appendChild(entry);
@@ -88,51 +141,28 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // Receive Stats Updates
   socket.on("stats_update", (stats) => {
     if (stats) {
-      // You might need to add specific IDs to your stats HTML elements if they aren't there
-      // Or traverse the DOM like this:
-      const statValues = document.querySelectorAll(".stat-value");
-      if (statValues.length >= 4) {
-        statValues[0].textContent = stats.comments_processed;
-        statValues[1].textContent = stats.scenes_switched;
-        statValues[2].textContent = 0; // Cache hits (optional to track now)
-        statValues[3].textContent = stats.errors;
+      const container = document.getElementById("statsContainer");
+      if (container) {
+        const statValues = container.querySelectorAll(".stat-value");
+        if (statValues.length >= 4) {
+          statValues[0].textContent = stats.comments_processed;
+          statValues[1].textContent = stats.scenes_switched;
+          statValues[2].textContent = stats.cache_hits || 0;
+          statValues[3].textContent = stats.errors;
+        }
       }
     }
   });
 
-  // --- HELPER: TOASTS ---
+  // --- UI HELPERS ---
   const showToast = (message, type = "success") => {
     const toast = document.createElement("div");
     toast.className = `toast toast-${type}`;
     toast.innerHTML = `<div class="toast-title">${type.toUpperCase()}</div><div class="toast-message">${message}</div>`;
     toastContainer.appendChild(toast);
     setTimeout(() => toast.remove(), 4000);
-  };
-
-  // --- CONTROL LOGIC ---
-  const toggleBot = async (action) => {
-    try {
-      const res = await fetch("/api/control", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action }),
-      });
-      const data = await res.json();
-
-      if (data.status === "success") {
-        showToast(data.message, "success");
-        // Update local state based on action
-        state.isRunning = action === "start";
-        updateUIState();
-      } else {
-        showToast(data.message, "error");
-      }
-    } catch (e) {
-      showToast("Connection failed", "error");
-    }
   };
 
   const updateUIState = () => {
@@ -144,6 +174,46 @@ document.addEventListener("DOMContentLoaded", () => {
     badge.className = `status-badge ${
       state.isRunning ? "status-badge-active" : "status-badge-inactive"
     }`;
+
+    const tiktokBadge = document.getElementById("tiktok-status-badge");
+    const obsBadge = document.getElementById("obs-status-badge");
+
+    if (state.isRunning) {
+      tiktokBadge.textContent = "Active";
+      tiktokBadge.className = "status-badge status-badge-active";
+      obsBadge.textContent = "Active";
+      obsBadge.className = "status-badge status-badge-active";
+    } else {
+      tiktokBadge.textContent = "Offline";
+      tiktokBadge.className = "status-badge status-badge-inactive";
+      obsBadge.textContent = "Offline";
+      obsBadge.className = "status-badge status-badge-inactive";
+    }
+  };
+
+  // --- CONTROL LOGIC ---
+  const toggleBot = async (action) => {
+    try {
+      const res = await fetch("/api/control", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action }),
+      });
+      const data = await res.json();
+      if (
+        data.status === "success" ||
+        data.status === "started" ||
+        data.status === "stopped"
+      ) {
+        showToast(data.message, "success");
+        state.isRunning = action === "start";
+        updateUIState();
+      } else {
+        showToast(data.message, "error");
+      }
+    } catch (e) {
+      showToast("Connection failed", "error");
+    }
   };
 
   const checkInitialStatus = async () => {
@@ -157,14 +227,13 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
-  // --- PRODUCT & SETTINGS LOGIC (Unchanged) ---
+  // --- PRODUCT LOGIC ---
   const saveAllToBackend = async (silent = false) => {
     const saveBtn = document.getElementById("saveSettingsBtn");
     if (!silent) {
       saveBtn.disabled = true;
       saveBtn.textContent = "Saving...";
     }
-
     try {
       const settingsToSave = {
         tiktok_username: document.getElementById("tiktok_username").value,
@@ -178,13 +247,11 @@ document.addEventListener("DOMContentLoaded", () => {
           document.getElementById("reconnect_delay").value,
         products: state.products,
       };
-
       const response = await fetch("/api/settings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(settingsToSave),
       });
-
       if (!response.ok) throw new Error("Save failed");
       if (!silent) showToast("Saved!", "success");
     } catch (e) {
@@ -209,7 +276,9 @@ document.addEventListener("DOMContentLoaded", () => {
         const item = productItemTemplate.content.cloneNode(true);
         item.querySelector(".product-item").dataset.index = index;
         item.querySelector(".product-item-name").textContent = product.name;
-        item.querySelector(".product-item-scene").textContent = product.scene;
+        // Show Filename instead of Scene Name for clarity
+        item.querySelector(".product-item-scene").textContent =
+          product.scene || "No Video Selected";
         item.querySelector(".product-item-description").textContent =
           product.description || "";
         productsContainer.appendChild(item);
@@ -218,6 +287,9 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   const showProductModal = (editIndex = null) => {
+    // Reload gallery to ensure we have latest files
+    loadGallery();
+
     const isEdit = editIndex !== null;
     const product = isEdit ? state.products[editIndex] : {};
 
@@ -226,9 +298,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const overlay = modalContainer.querySelector(".modal-overlay");
     const nameInput = overlay.querySelector("#modal-product-name");
-    const sceneInput = overlay.querySelector("#modal-product-scene");
+    const sceneInput = overlay.querySelector("#modal-product-scene"); // This is the dummy input we replace
     const descInput = overlay.querySelector("#modal-product-description");
     const saveBtn = overlay.querySelector("#modal-save");
+
+    // REPLACE SCENE INPUT WITH SELECT DROPDOWN
+    const select = document.createElement("select");
+    select.className = "form-input";
+    select.id = "modal-product-scene";
+    let optionsHtml = `<option value="">-- Select Video from Gallery --</option>`;
+    availableVideos.forEach((v) => {
+      optionsHtml += `<option value="${v}">${v}</option>`;
+    });
+    select.innerHTML = optionsHtml;
+    sceneInput.replaceWith(select);
 
     overlay.querySelector(".modal-title").textContent = isEdit
       ? "Edit Product"
@@ -236,7 +319,7 @@ document.addEventListener("DOMContentLoaded", () => {
     saveBtn.textContent = isEdit ? "Update & Save" : "Save Product";
 
     nameInput.value = product.name || "";
-    sceneInput.value = product.scene || "";
+    select.value = product.scene || "";
     descInput.value = product.description || "";
 
     const closeModal = () => overlay.remove();
@@ -249,11 +332,12 @@ document.addEventListener("DOMContentLoaded", () => {
       .addEventListener("click", closeModal);
 
     saveBtn.addEventListener("click", async () => {
-      if (!nameInput.value || !sceneInput.value)
-        return showToast("Required fields missing", "error");
+      if (!nameInput.value || !select.value)
+        return showToast("Please enter a name and select a video", "error");
+
       const newProd = {
         name: nameInput.value,
-        scene: sceneInput.value,
+        scene: select.value, // We store the FILENAME in the 'scene' field
         description: descInput.value,
       };
 
@@ -270,7 +354,6 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
       const res = await fetch("/api/settings");
       const data = await res.json();
-
       document.getElementById("tiktok_username").value =
         data.tiktok_username || "";
       document.getElementById("deepseek_api_key").value =
@@ -286,7 +369,6 @@ document.addEventListener("DOMContentLoaded", () => {
         data.comment_rate_limit || 2;
       document.getElementById("reconnect_delay").value =
         data.tiktok_reconnect_delay || 30;
-
       state.products = data.products || [];
       renderProducts();
     } catch (e) {
@@ -306,6 +388,9 @@ document.addEventListener("DOMContentLoaded", () => {
     pages.forEach((p) =>
       p.classList.toggle("active", p.id === navItem.dataset.page)
     );
+
+    // If clicking Gallery tab, reload the videos
+    if (navItem.dataset.page === "gallery") loadGallery();
   });
 
   startButton.addEventListener("click", () => toggleBot("start"));
@@ -337,6 +422,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // Init
+  loadGallery();
   loadSettings();
   checkInitialStatus();
 });
