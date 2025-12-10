@@ -65,28 +65,11 @@
             stroke="currentColor"
           >
             <path
-              d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"
+              d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"
             />
             <circle cx="12" cy="12" r="3" />
           </svg>
           <span>Settings</span>
-        </a>
-        <a href="#" class="nav-item" data-page="logs">
-          <svg
-            class="nav-icon"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-          >
-            <path
-              d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"
-            />
-            <polyline points="14 2 14 8 20 8" />
-            <line x1="16" y1="13" x2="8" y2="13" />
-            <line x1="16" y1="17" x2="8" y2="17" />
-            <line x1="10" y1="9" x2="8" y2="9" />
-          </svg>
-          <span>Logs</span>
         </a>
       </nav>
     </aside>
@@ -95,92 +78,145 @@
     <!-- == MAIN CONTENT == -->
     <!-- ================== -->
     <main class="main-content">
-      <!-- DASHBOARD PAGE -->
+      <!-- DASHBOARD PAGE (Unified View) -->
       <div id="dashboard" class="page active">
         <div class="page-header">
           <div>
             <h1 class="page-title">Dashboard</h1>
             <p class="page-description">
-              An overview of your live stream automation.
+              Live insights and control for your stream automation.
             </p>
           </div>
-          <div class="page-actions">
-            <button id="startButton" class="btn btn-primary">
-              <svg
-                class="btn-icon"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-              >
-                <polygon points="5 3 19 12 5 21 5 3" /></svg
-              >Start Bot
-            </button>
-            <button id="stopButton" class="btn btn-destructive" disabled>
-              <svg
-                class="btn-icon"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-              >
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" /></svg
-              >Stop Bot
-            </button>
-          </div>
         </div>
-        <div id="statsContainer" class="stats-grid">
-          <!-- Stats will be inserted by JS -->
-        </div>
-        <div class="info-grid">
-          <div class="card">
-            <div class="card-header">
-              <h3 class="card-title">System Status</h3>
+
+        <div class="dashboard-grid">
+          <!-- Left Column: Controls & Stats -->
+          <div class="dashboard-sidebar">
+            <!-- Control Card -->
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title">System Control</h3>
+              </div>
+              <div class="card-content">
+                <div class="control-actions">
+                  <button id="startButton" class="btn btn-primary">
+                    <svg
+                      class="btn-icon"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                    >
+                      <polygon points="5 3 19 12 5 21 5 3" />
+                    </svg>
+                    Start Bot
+                  </button>
+                  <button id="stopButton" class="btn btn-destructive" disabled>
+                    <svg
+                      class="btn-icon"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                    >
+                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                    </svg>
+                    Stop Bot
+                  </button>
+                </div>
+                <div class="status-list" style="margin-top: 1.5rem">
+                  <div class="status-item">
+                    <span class="status-item-label">Bot Status</span
+                    ><span
+                      class="status-badge status-badge-inactive"
+                      id="bot-status-badge"
+                      >Stopped</span
+                    >
+                  </div>
+                  <div class="status-item">
+                    <span class="status-item-label">TikTok</span
+                    ><span
+                      class="status-badge status-badge-inactive"
+                      id="tiktok-status-badge"
+                      >Offline</span
+                    >
+                  </div>
+                  <div class="status-item">
+                    <span class="status-item-label">OBS Studio</span
+                    ><span
+                      class="status-badge status-badge-inactive"
+                      id="obs-status-badge"
+                      >Offline</span
+                    >
+                  </div>
+                </div>
+              </div>
             </div>
-            <div class="card-content">
-              <div class="status-list">
-                <div class="status-item">
-                  <span class="status-item-label">Bot Status</span
-                  ><span
-                    class="status-badge status-badge-inactive"
-                    id="bot-status-badge"
-                    >Stopped</span
-                  >
-                </div>
-                <div class="status-item">
-                  <span class="status-item-label">TikTok Connection</span
-                  ><span
-                    class="status-badge status-badge-inactive"
-                    id="tiktok-status-badge"
-                    >Disconnected</span
-                  >
-                </div>
-                <div class="status-item">
-                  <span class="status-item-label">OBS Connection</span
-                  ><span
-                    class="status-badge status-badge-inactive"
-                    id="obs-status-badge"
-                    >Disconnected</span
-                  >
+
+            <!-- Stats Card -->
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title">Live Statistics</h3>
+              </div>
+              <div class="card-content" id="statsContainer">
+                <!-- Default Stats view before JS loads -->
+                <div class="stats-mini-grid">
+                  <div class="stat-box">
+                    <span class="stat-label">Comments</span
+                    ><span class="stat-value">0</span>
+                  </div>
+                  <div class="stat-box">
+                    <span class="stat-label">Switches</span
+                    ><span class="stat-value">0</span>
+                  </div>
+                  <div class="stat-box">
+                    <span class="stat-label">Cache Hits</span
+                    ><span class="stat-value">0</span>
+                  </div>
+                  <div class="stat-box">
+                    <span class="stat-label">Errors</span
+                    ><span class="stat-value">0</span>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-          <div class="card">
-            <div class="card-header">
-              <h3 class="card-title">Quick Start</h3>
+
+          <!-- Right Column: Logs -->
+          <div class="dashboard-main-content">
+            <div
+              class="card"
+              style="height: 100%; display: flex; flex-direction: column"
+            >
+              <div class="card-header">
+                <div
+                  style="
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                  "
+                >
+                  <h3 class="card-title">Live Chat Feed</h3>
+                  <span class="status-badge status-badge-active">Live</span>
+                </div>
+              </div>
+              <div
+                class="log-content"
+                id="chatLogContent"
+                style="flex: 1; max-height: 400px"
+              ></div>
             </div>
-            <div class="card-content">
-              <ol class="steps-list">
-                <li>
-                  Go to the <strong>Products</strong> page to add items and
-                  scenes.
-                </li>
-                <li>
-                  Go to the <strong>Settings</strong> page to enter your
-                  credentials.
-                </li>
-                <li>Ensure the TikTok user is <strong>live</strong>.</li>
-                <li>Return here and click <strong>Start Bot</strong>.</li>
-              </ol>
+
+            <div
+              class="card"
+              style="height: 100%; display: flex; flex-direction: column"
+            >
+              <div class="card-header">
+                <h3 class="card-title">System Action Log</h3>
+              </div>
+              <div
+                class="log-content"
+                id="actionLogContent"
+                style="flex: 1; max-height: 300px"
+              ></div>
             </div>
           </div>
         </div>
@@ -204,14 +240,13 @@
               stroke="currentColor"
             >
               <path d="M5 12h14" />
-              <path d="M12 5v14" /></svg
-            >Add Product
+              <path d="M12 5v14" />
+            </svg>
+            Add Product
           </button>
         </div>
         <div class="card">
-          <div class="card-content" id="productsContainer">
-            <!-- Product items will be inserted here by JS -->
-          </div>
+          <div class="card-content" id="productsContainer"></div>
           <div class="empty-state" id="productsEmptyState">
             <svg
               class="empty-icon"
@@ -380,43 +415,10 @@
           </div>
         </form>
       </div>
-
-      <!-- LOGS PAGE -->
-      <div id="logs" class="page">
-        <div class="page-header">
-          <div>
-            <h1 class="page-title">Activity Logs</h1>
-            <p class="page-description">
-              A real-time feed of incoming comments and system actions.
-            </p>
-          </div>
-        </div>
-        <div class="logs-grid">
-          <div class="card">
-            <div class="card-header">
-              <h3 class="card-title">TikTok Live Chat</h3>
-            </div>
-            <div class="log-content" id="chatLogContent"></div>
-          </div>
-          <div class="card">
-            <div class="card-header">
-              <h3 class="card-title">System Actions</h3>
-            </div>
-            <div class="log-content" id="actionLogContent"></div>
-          </div>
-        </div>
-      </div>
     </main>
 
-    <!-- ============ -->
-    <!-- == MODALS == -->
-    <!-- ============ -->
+    <!-- Modals, Templates, and Toasts -->
     <div id="modalContainer"></div>
-
-    <!-- ================== -->
-    <!-- == TEMPLATES == -->
-    <!-- ================== -->
-    <!-- PRODUCT ITEM TEMPLATE -->
     <template id="product-item-template">
       <div class="product-item">
         <div class="product-item-header">
@@ -452,8 +454,6 @@
         <div class="product-item-description"></div>
       </div>
     </template>
-
-    <!-- PRODUCT MODAL TEMPLATE -->
     <template id="product-modal-template">
       <div class="modal-overlay">
         <div class="modal">
@@ -509,10 +509,8 @@
         </div>
       </div>
     </template>
-
-    <!-- TOAST NOTIFICATION CONTAINER -->
     <div id="toastContainer" class="toast-container"></div>
 
-    <script src="/static/js/script.js"></script>
+    <script src="/static/js/script.js?v=9999"></script>
   </body>
 </html>

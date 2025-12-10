@@ -1,12 +1,12 @@
 {
-  "tiktok_username": "@warungpakkepiting",
+  "tiktok_username": "@cocoshopglobal",
   "deepseek_api_key": "sk-6b6d0dc49e044e0abb9aee2e1585981d",
   "main_scene_name": "Scene_A",
   "obs_ws_host": "localhost",
   "obs_ws_port": 4455,
   "obs_ws_password": "",
   "comment_rate_limit": 2,
-  "tiktok_reconnect_delay": 30,
+  "tiktok_reconnect_delay": 3,
   "cache_duration_seconds": 300,
   "product_list": [
     "Cosmic Glow Lamp",

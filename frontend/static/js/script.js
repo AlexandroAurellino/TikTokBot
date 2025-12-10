@@ -1,12 +1,13 @@
+// frontend/static/js/script.js
+
 document.addEventListener("DOMContentLoaded", () => {
-  // --- STATE MANAGEMENT ---
+  // --- STATE ---
   let state = {
-    products: [], // Holds the source of truth for products
+    products: [],
     isRunning: false,
-    settings: {},
   };
 
-  // --- ELEMENT SELECTORS ---
+  // --- SELECTORS ---
   const sidebar = document.querySelector(".sidebar");
   const pages = document.querySelectorAll(".page");
   const startButton = document.getElementById("startButton");
@@ -18,7 +19,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const modalContainer = document.getElementById("modalContainer");
   const toastContainer = document.getElementById("toastContainer");
 
-  // Templates
+  // Log Containers
+  const chatLogContent = document.getElementById("chatLogContent");
+  const actionLogContent = document.getElementById("actionLogContent");
+
   const productItemTemplate = document.getElementById("product-item-template");
   const productModalTemplate = document.getElementById(
     "product-modal-template"
@@ -26,273 +30,117 @@ document.addEventListener("DOMContentLoaded", () => {
 
   let statusPollInterval = null;
 
-  // ============================
-  // === UI & RENDER FUNCTIONS ===
-  // ============================
-
-  /**
-   * Shows a toast notification at the bottom-right of the screen.
-   * @param {string} message The message to display.
-   * @param {('success'|'error')} type The type of toast.
-   */
+  // --- HELPER: TOASTS ---
   const showToast = (message, type = "success") => {
     const toast = document.createElement("div");
     toast.className = `toast toast-${type}`;
-    toast.innerHTML = `
-      <div class="toast-title">${
-        type.charAt(0).toUpperCase() + type.slice(1)
-      }</div>
-      <div class="toast-message">${message}</div>
-    `;
+    toast.innerHTML = `<div class="toast-title">${type.toUpperCase()}</div><div class="toast-message">${message}</div>`;
     toastContainer.appendChild(toast);
     setTimeout(() => toast.remove(), 4000);
   };
 
-  /** Renders the list of products from the local state. */
-  const renderProducts = () => {
-    productsContainer.innerHTML = ""; // Clear existing products
-    if (state.products.length === 0) {
-      productsEmptyState.style.display = "block";
-      productsContainer.style.display = "none";
-    } else {
-      productsEmptyState.style.display = "none";
-      productsContainer.style.display = "block";
-      state.products.forEach((product, index) => {
-        const productElement = productItemTemplate.content.cloneNode(true);
-        productElement.querySelector(".product-item").dataset.index = index;
-        productElement.querySelector(".product-item-name").textContent =
-          product.name;
-        productElement.querySelector(
-          ".product-item-scene"
-        ).textContent = `OBS Scene: ${product.scene}`;
-        productElement.querySelector(".product-item-description").textContent =
-          product.description || "No AI keywords or description provided.";
-        productsContainer.appendChild(productElement);
-      });
-    }
-  };
+  // --- HELPER: RENDER LOGS (NEW) ---
+  const renderLogs = (logs) => {
+    if (!logs || !Array.isArray(logs)) return;
 
-  /**
-   * Updates the entire dashboard UI based on API data.
-   * @param {object} data The data from the /api/status endpoint.
-   */
-  const updateDashboardUI = (data) => {
-    state.isRunning = data.running;
+    // Clear current logs to avoid duplication
+    // (The backend sends the full recent history every poll)
+    chatLogContent.innerHTML = "";
+    actionLogContent.innerHTML = "";
 
-    // Buttons
-    startButton.disabled = state.isRunning;
-    stopButton.disabled = !state.isRunning;
+    // The logs come in [Oldest, ..., Newest].
+    // Our CSS uses 'flex-direction: column-reverse', so the last DOM element
+    // appears at the TOP of the container visually.
+    logs.forEach((log) => {
+      const entry = document.createElement("div");
+      entry.className = "log-entry";
 
-    // Badges
-    const botStatusBadge = document.getElementById("bot-status-badge");
-    const tiktokStatusBadge = document.getElementById("tiktok-status-badge");
-    const obsStatusBadge = document.getElementById("obs-status-badge");
-
-    botStatusBadge.textContent = state.isRunning ? "Running" : "Stopped";
-    botStatusBadge.className = `status-badge ${
-      state.isRunning ? "status-badge-active" : "status-badge-inactive"
-    }`;
-
-    // In a real scenario, the backend would provide individual connection statuses
-    tiktokStatusBadge.textContent = state.isRunning
-      ? "Connected"
-      : "Disconnected";
-    tiktokStatusBadge.className = `status-badge ${
-      state.isRunning ? "status-badge-active" : "status-badge-inactive"
-    }`;
-    obsStatusBadge.textContent = state.isRunning ? "Connected" : "Disconnected";
-    obsStatusBadge.className = `status-badge ${
-      state.isRunning ? "status-badge-active" : "status-badge-inactive"
-    }`;
-
-    // Stats
-    const statsContainer = document.getElementById("statsContainer");
-    if (data.running && data.stats) {
-      statsContainer.innerHTML = `
-            <div class="stat-card"><div class="stat-label">Comments</div><div class="stat-value">${
-              data.stats.comments_processed || 0
-            }</div></div>
-            <div class="stat-card"><div class="stat-label">Switches</div><div class="stat-value">${
-              data.stats.scenes_switched || 0
-            }</div></div>
-            <div class="stat-card"><div class="stat-label">Cache Hits</div><div class="stat-value">${
-              data.stats.cache_hits || 0
-            }</div></div>
-            <div class="stat-card"><div class="stat-label">Errors</div><div class="stat-value">${
-              data.stats.errors || 0
-            }</div></div>
-        `;
-    }
-  };
-
-  // ===========================
-  // === MODAL & FORM LOGIC ===
-  // ===========================
-
-  /**
-   * Displays the modal for adding or editing a product.
-   * @param {number|null} editIndex The index of the product to edit, or null to add.
-   */
-  const showProductModal = (editIndex = null) => {
-    const isEdit = editIndex !== null;
-    const product = isEdit ? state.products[editIndex] : {};
-
-    const modalNode = productModalTemplate.content.cloneNode(true);
-    modalContainer.innerHTML = ""; // Clear any previous modal
-    modalContainer.appendChild(modalNode);
-
-    const overlay = modalContainer.querySelector(".modal-overlay");
-    const title = overlay.querySelector(".modal-title");
-    const saveBtn = overlay.querySelector("#modal-save");
-    const nameInput = overlay.querySelector("#modal-product-name");
-    const sceneInput = overlay.querySelector("#modal-product-scene");
-    const descInput = overlay.querySelector("#modal-product-description");
-
-    title.textContent = isEdit ? "Edit Product" : "Add New Product";
-    saveBtn.textContent = isEdit ? "Update Product" : "Save Product";
-    nameInput.value = product.name || "";
-    sceneInput.value = product.scene || "";
-    descInput.value = product.description || "";
-
-    const closeModal = () => overlay.remove();
-
-    overlay.addEventListener(
-      "click",
-      (e) => e.target === overlay && closeModal()
-    );
-    overlay
-      .querySelector("#modal-cancel")
-      .addEventListener("click", closeModal);
-    overlay.querySelector("#modal-save").addEventListener("click", () => {
-      const name = nameInput.value.trim();
-      const scene = sceneInput.value.trim();
-      const description = descInput.value.trim();
-
-      if (!name || !scene) {
-        return showToast("Product Name and OBS Scene are required.", "error");
-      }
-
-      const newProduct = { name, scene, description };
-      if (isEdit) {
-        state.products[editIndex] = newProduct;
+      if (log.type === "chat") {
+        entry.innerHTML = `<span class="user">${log.user}:</span> ${log.message}`;
+        chatLogContent.appendChild(entry);
       } else {
-        state.products.push(newProduct);
+        // System/Action log
+        entry.innerHTML = `<span class="action-success">[${log.time}]</span> ${log.message}`;
+        actionLogContent.appendChild(entry);
       }
-
-      renderProducts();
-      showToast(
-        `Product ${isEdit ? "updated" : "added"} successfully.`,
-        "success"
-      );
-      closeModal();
     });
   };
 
-  // ============================
-  // === API COMMUNICATION ===
-  // ============================
-
-  /** Fetches status and log data from the backend. */
+  // --- API POLL ---
   const fetchStatusAndLogs = async () => {
     try {
       const response = await fetch("/api/status");
-      if (!response.ok) return; // Fail silently on poll
+      if (!response.ok) return;
       const data = await response.json();
-      updateDashboardUI(data);
 
-      // Placeholder for future log fetching from an endpoint like /api/logs
-      // const logResponse = await fetch("/api/logs");
-      // const logData = await logResponse.json();
-      // updateLogs(logData);
+      // Update UI State
+      state.isRunning = data.running;
+      startButton.disabled = state.isRunning;
+      stopButton.disabled = !state.isRunning;
+
+      const badge = document.getElementById("bot-status-badge");
+      badge.textContent = state.isRunning ? "Running" : "Stopped";
+      badge.className = `status-badge ${
+        state.isRunning ? "status-badge-active" : "status-badge-inactive"
+      }`;
+
+      // Simulating connection statuses based on bot state (since we don't have granular flags yet)
+      const tiktokBadge = document.getElementById("tiktok-status-badge");
+      const obsBadge = document.getElementById("obs-status-badge");
+
+      if (state.isRunning) {
+        tiktokBadge.textContent = "Active";
+        tiktokBadge.className = "status-badge status-badge-active";
+        obsBadge.textContent = "Active";
+        obsBadge.className = "status-badge status-badge-active";
+      } else {
+        tiktokBadge.textContent = "Offline";
+        tiktokBadge.className = "status-badge status-badge-inactive";
+        obsBadge.textContent = "Offline";
+        obsBadge.className = "status-badge status-badge-inactive";
+      }
+
+      // Update Stats
+      if (data.stats) {
+        document.getElementById("statsContainer").innerHTML = `
+         <div class="stats-mini-grid">
+            <div class="stat-box"><span class="stat-label">Comments</span><span class="stat-value">${data.stats.comments_processed}</span></div>
+            <div class="stat-box"><span class="stat-label">Switches</span><span class="stat-value">${data.stats.scenes_switched}</span></div>
+            <div class="stat-box"><span class="stat-label">Cache Hits</span><span class="stat-value">${data.stats.cache_hits}</span></div>
+            <div class="stat-box"><span class="stat-label">Errors</span><span class="stat-value">${data.stats.errors}</span></div>
+         </div>`;
+      }
+
+      // Update Logs (The missing piece!)
+      if (data.logs) {
+        renderLogs(data.logs);
+      }
     } catch (error) {
       console.error("Polling failed:", error);
     }
   };
 
-  /** Loads all settings and populates the UI. */
-  const loadSettings = async () => {
-    try {
-      const response = await fetch("/api/settings");
-      if (!response.ok)
-        throw new Error("Failed to fetch settings from server.");
-      const settings = await response.json();
-      state.settings = settings;
-
-      // Populate Settings form
-      settingsForm.querySelector("#tiktok_username").value =
-        settings.tiktok_username || "";
-      settingsForm.querySelector("#deepseek_api_key").value =
-        settings.deepseek_api_key || "";
-      settingsForm.querySelector("#main_scene_name").value =
-        settings.main_scene_name || "";
-      settingsForm.querySelector("#obs_ws_host").value =
-        settings.obs_ws_host || "localhost";
-      settingsForm.querySelector("#obs_ws_port").value =
-        settings.obs_ws_port || 4455;
-      settingsForm.querySelector("#obs_ws_password").value =
-        settings.obs_ws_password || "";
-      settingsForm.querySelector("#rate_limit").value =
-        settings.comment_rate_limit || 2;
-      settingsForm.querySelector("#reconnect_delay").value =
-        settings.tiktok_reconnect_delay || 30;
-      settingsForm.querySelector("#cache_duration").value =
-        settings.cache_duration_seconds || 300;
-
-      // Populate local product state from the flat config lists
-      state.products = settings.product_list.map((name) => ({
-        name: name,
-        scene: settings.product_to_scene_map[name] || "",
-        description: settings.product_descriptions?.[name] || "",
-      }));
-      renderProducts();
-    } catch (error) {
-      console.error("Load settings error:", error);
-      showToast(error.message, "error");
+  // --- PRODUCT & SETTINGS LOGIC ---
+  const saveAllToBackend = async (silent = false) => {
+    const saveBtn = document.getElementById("saveSettingsBtn");
+    if (!silent) {
+      saveBtn.disabled = true;
+      saveBtn.textContent = "Saving...";
     }
-  };
-
-  /** Saves all settings from the UI to the backend. */
-  const handleSaveSettings = async (event) => {
-    event.preventDefault();
-    const saveButton = document.getElementById("saveSettingsBtn");
-    saveButton.disabled = true;
-    saveButton.textContent = "Saving...";
 
     try {
-      // Construct the flat structure the backend expects from our product state
-      const product_list = state.products.map((p) => p.name);
-      const product_to_scene_map = Object.fromEntries(
-        state.products.map((p) => [p.name, p.scene])
-      );
-      const product_descriptions = Object.fromEntries(
-        state.products.map((p) => [p.name, p.description])
-      );
-
       const settingsToSave = {
-        tiktok_username: settingsForm.querySelector("#tiktok_username").value,
-        deepseek_api_key: settingsForm.querySelector("#deepseek_api_key").value,
-        main_scene_name: settingsForm.querySelector("#main_scene_name").value,
-        obs_ws_host: settingsForm.querySelector("#obs_ws_host").value,
-        obs_ws_port: parseInt(
-          settingsForm.querySelector("#obs_ws_port").value,
-          10
-        ),
-        obs_ws_password: settingsForm.querySelector("#obs_ws_password").value,
-        comment_rate_limit: parseInt(
-          settingsForm.querySelector("#rate_limit").value,
-          10
-        ),
-        tiktok_reconnect_delay: parseInt(
-          settingsForm.querySelector("#reconnect_delay").value,
-          10
-        ),
-        cache_duration_seconds: parseInt(
-          settingsForm.querySelector("#cache_duration").value,
-          10
-        ),
-        product_list,
-        product_to_scene_map,
-        product_descriptions,
+        tiktok_username: document.getElementById("tiktok_username").value,
+        deepseek_api_key: document.getElementById("deepseek_api_key").value,
+        main_scene_name: document.getElementById("main_scene_name").value,
+        obs_ws_host: document.getElementById("obs_ws_host").value,
+        obs_ws_port: document.getElementById("obs_ws_port").value,
+        obs_ws_password: document.getElementById("obs_ws_password").value,
+        comment_rate_limit: document.getElementById("rate_limit").value,
+        tiktok_reconnect_delay:
+          document.getElementById("reconnect_delay").value,
+        cache_duration_seconds: document.getElementById("cache_duration").value,
+        products: state.products,
       };
 
       const response = await fetch("/api/settings", {
@@ -301,103 +149,191 @@ document.addEventListener("DOMContentLoaded", () => {
         body: JSON.stringify(settingsToSave),
       });
 
-      const result = await response.json();
-      if (!response.ok)
-        throw new Error(result.error || "Failed to save settings.");
-
-      showToast("Settings saved successfully!", "success");
-    } catch (error) {
-      console.error("Save settings error:", error);
-      showToast(error.message, "error");
+      if (!response.ok) throw new Error("Save failed");
+      if (!silent) showToast("Saved!", "success");
+    } catch (e) {
+      showToast(e.message, "error");
     } finally {
-      saveButton.disabled = false;
-      saveButton.textContent = "Save Settings";
+      if (!silent) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = "Save Settings";
+      }
     }
   };
 
-  // ======================
-  // === EVENT LISTENERS ===
-  // ======================
+  const renderProducts = () => {
+    productsContainer.innerHTML = "";
+    if (state.products.length === 0) {
+      productsEmptyState.style.display = "block";
+      productsContainer.style.display = "none";
+    } else {
+      productsEmptyState.style.display = "none";
+      productsContainer.style.display = "block";
+      state.products.forEach((product, index) => {
+        const item = productItemTemplate.content.cloneNode(true);
+        item.querySelector(".product-item").dataset.index = index;
+        item.querySelector(".product-item-name").textContent = product.name;
+        item.querySelector(".product-item-scene").textContent = product.scene;
+        item.querySelector(".product-item-description").textContent =
+          product.description || "";
+        productsContainer.appendChild(item);
+      });
+    }
+  };
 
-  // Sidebar Navigation
+  const showProductModal = (editIndex = null) => {
+    const isEdit = editIndex !== null;
+    const product = isEdit ? state.products[editIndex] : {};
+
+    modalContainer.innerHTML = "";
+    modalContainer.appendChild(productModalTemplate.content.cloneNode(true));
+
+    const overlay = modalContainer.querySelector(".modal-overlay");
+    const nameInput = overlay.querySelector("#modal-product-name");
+    const sceneInput = overlay.querySelector("#modal-product-scene");
+    const descInput = overlay.querySelector("#modal-product-description");
+    const saveBtn = overlay.querySelector("#modal-save");
+
+    overlay.querySelector(".modal-title").textContent = isEdit
+      ? "Edit Product"
+      : "Add Product";
+    saveBtn.textContent = isEdit ? "Update & Save" : "Save Product";
+
+    nameInput.value = product.name || "";
+    sceneInput.value = product.scene || "";
+    descInput.value = product.description || "";
+
+    const closeModal = () => overlay.remove();
+    overlay.addEventListener(
+      "click",
+      (e) => e.target === overlay && closeModal()
+    );
+    overlay
+      .querySelector("#modal-cancel")
+      .addEventListener("click", closeModal);
+
+    // Save Handler (Immediate DB Save)
+    saveBtn.addEventListener("click", async () => {
+      if (!nameInput.value || !sceneInput.value)
+        return showToast("Required fields missing", "error");
+      const newProd = {
+        name: nameInput.value,
+        scene: sceneInput.value,
+        description: descInput.value,
+      };
+
+      if (isEdit) state.products[editIndex] = newProd;
+      else state.products.push(newProd);
+
+      renderProducts();
+      closeModal();
+      await saveAllToBackend(true);
+    });
+  };
+
+  const loadSettings = async () => {
+    try {
+      const res = await fetch("/api/settings");
+      const data = await res.json();
+
+      document.getElementById("tiktok_username").value =
+        data.tiktok_username || "";
+      document.getElementById("deepseek_api_key").value =
+        data.deepseek_api_key || "";
+      document.getElementById("main_scene_name").value =
+        data.main_scene_name || "";
+      document.getElementById("obs_ws_host").value =
+        data.obs_ws_host || "localhost";
+      document.getElementById("obs_ws_port").value = data.obs_ws_port || 4455;
+      document.getElementById("obs_ws_password").value =
+        data.obs_ws_password || "";
+      document.getElementById("rate_limit").value =
+        data.comment_rate_limit || 2;
+      document.getElementById("reconnect_delay").value =
+        data.tiktok_reconnect_delay || 30;
+      document.getElementById("cache_duration").value =
+        data.cache_duration_seconds || 300;
+
+      state.products = data.products || [];
+      renderProducts();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  // --- LISTENERS ---
   sidebar.addEventListener("click", (e) => {
     const navItem = e.target.closest(".nav-item");
     if (!navItem) return;
     e.preventDefault();
-    const targetPageId = navItem.dataset.page;
-
     sidebar
       .querySelectorAll(".nav-item")
-      .forEach((item) => item.classList.remove("active"));
+      .forEach((i) => i.classList.remove("active"));
     navItem.classList.add("active");
-
-    pages.forEach((page) =>
-      page.classList.toggle("active", page.id === targetPageId)
+    pages.forEach((p) =>
+      p.classList.toggle("active", p.id === navItem.dataset.page)
     );
   });
 
-  // Bot Controls
   startButton.addEventListener("click", async () => {
     try {
-      const response = await fetch("/api/start", { method: "POST" });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.message);
-      showToast(result.message, "success");
-      fetchStatusAndLogs(); // Immediate update
-    } catch (error) {
-      showToast(error.message, "error");
+      const res = await fetch("/api/start", { method: "POST" });
+      const data = await res.json();
+      if (res.ok) {
+        showToast(data.message, "success");
+        fetchStatusAndLogs();
+      } else {
+        showToast(data.message, "error");
+      }
+    } catch (e) {
+      showToast("Failed to start", "error");
     }
   });
 
   stopButton.addEventListener("click", async () => {
     try {
-      const response = await fetch("/api/stop", { method: "POST" });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.message);
-      showToast(result.message, "success");
-      fetchStatusAndLogs(); // Immediate update
-    } catch (error) {
-      showToast(error.message, "error");
+      const res = await fetch("/api/stop", { method: "POST" });
+      const data = await res.json();
+      if (res.ok) {
+        showToast(data.message, "success");
+        fetchStatusAndLogs();
+      } else {
+        showToast(data.message, "error");
+      }
+    } catch (e) {
+      showToast("Failed to stop", "error");
     }
   });
 
-  // Product Actions
   addProductBtn.addEventListener("click", () => showProductModal());
-  productsContainer.addEventListener("click", (e) => {
+
+  productsContainer.addEventListener("click", async (e) => {
     const editBtn = e.target.closest(".btn-edit");
     const deleteBtn = e.target.closest(".btn-delete");
 
     if (editBtn) {
-      const index = parseInt(
-        editBtn.closest(".product-item").dataset.index,
-        10
+      showProductModal(
+        parseInt(editBtn.closest(".product-item").dataset.index)
       );
-      showProductModal(index);
     }
-    if (deleteBtn) {
-      if (confirm("Are you sure you want to delete this product?")) {
-        const index = parseInt(
-          deleteBtn.closest(".product-item").dataset.index,
-          10
-        );
-        state.products.splice(index, 1);
-        renderProducts();
-        showToast("Product deleted.", "success");
-      }
+    if (deleteBtn && confirm("Delete product?")) {
+      state.products.splice(
+        parseInt(deleteBtn.closest(".product-item").dataset.index),
+        1
+      );
+      renderProducts();
+      await saveAllToBackend(true);
+      showToast("Product deleted", "success");
     }
   });
 
-  // Settings Form
-  settingsForm.addEventListener("submit", handleSaveSettings);
+  settingsForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    await saveAllToBackend();
+  });
 
-  // ====================
-  // === INITIALIZATION ===
-  // ====================
-  const initialize = async () => {
-    await loadSettings();
-    await fetchStatusAndLogs();
-    statusPollInterval = setInterval(fetchStatusAndLogs, 3000); // Poll every 3 seconds
-  };
-
-  initialize();
+  // Init
+  loadSettings();
+  fetchStatusAndLogs();
+  statusPollInterval = setInterval(fetchStatusAndLogs, 3000);
 });
