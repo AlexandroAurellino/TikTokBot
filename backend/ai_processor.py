@@ -8,8 +8,6 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 # --- Robustly load environment variables ---
-# This builds a path to the project's root directory and finds the .env file there.
-# This method is reliable, regardless of where the script is run from.
 project_root = Path(__file__).parent.parent
 dotenv_path = project_root / '.env'
 load_dotenv(dotenv_path=dotenv_path)
@@ -30,9 +28,43 @@ class AIProcessor:
             "Content-Type": "application/json",
             "Authorization": f"Bearer {self.api_key}"
         }
+        
+        # KEYWORDS that suggest a user is interested in a product.
+        # If a comment doesn't have a product name OR one of these words, we skip the AI.
+        self.trigger_words = [
+            "show", "see", "look", "display", "view", "preview", 
+            "buy", "get", "price", "cost", "how much", "can i", "open", 
+            "interested", "demo", "close up"
+        ]
+
+    def _passes_cheap_filter(self, comment: str, product_list: list[str]) -> bool:
+        """
+        Returns True if the comment contains product names or trigger words.
+        This saves API tokens by filtering out 'hi', 'hello', 'shared', etc.
+        """
+        comment_lower = comment.lower()
+        
+        # 1. Check for direct product name mentions (fuzzy check)
+        for product in product_list:
+            if product.lower() in comment_lower:
+                return True
+                
+        # 2. Check for intent trigger words
+        for trigger in self.trigger_words:
+            if trigger in comment_lower:
+                return True
+                
+        return False
 
     def analyze_comment(self, comment: str, product_list: list[str]) -> dict:
         """Analyzes a user's comment to find product intent."""
+        
+        # --- COST SAVING CHECK ---
+        if not self._passes_cheap_filter(comment, product_list):
+            logging.info(f"Skipping AI for: '{comment}' (No product/trigger keywords found)")
+            return {"intent": "other", "product_name": None}
+
+        # --- AI REQUEST ---
         products_str = ", ".join(f'"{p}"' for p in product_list)
         system_prompt = (
             "You are an intelligent assistant for a TikTok Shop live stream. "
@@ -49,7 +81,8 @@ class AIProcessor:
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": comment}
             ],
-            "response_format": {"type": "json_object"}
+            "response_format": {"type": "json_object"},
+            "temperature": 0.1 # Low temp = more consistent answers
         }
 
         try:
@@ -66,28 +99,3 @@ class AIProcessor:
         except (KeyError, IndexError, json.JSONDecodeError) as e:
             logging.error(f"Failed to parse AI response: {e}")
             return {"intent": "error", "product_name": None}
-
-# --- Test block for running this file directly ---
-if __name__ == '__main__':
-    DEEPSEEK_KEY = os.getenv("DEEPSEEK_API_KEY")
-
-    if not DEEPSEEK_KEY:
-        print("="*60)
-        print("!!! DEEPSEEK_API_KEY not found. Please check your .env file. !!!")
-        print("="*60)
-    else:
-        our_products = ["Cosmic Glow Lamp", "Stealth Gaming Mouse", "Ultra-Soft Hoodie"]
-        ai_processor = AIProcessor(api_key=DEEPSEEK_KEY)
-        test_comments = [
-            "hey can i see the cosmic glow lamp",
-            "show me the mouse",
-            "hi how are you",
-            "what's the price on the hoodie?",
-            "that lamp looks cool"
-        ]
-        print("\n--- Starting AI Processor Test ---")
-        for c in test_comments:
-            result = ai_processor.analyze_comment(c, our_products)
-            print(f"Comment: '{c}'  ==>  Intent: {result.get('intent')}, Product: {result.get('product_name')}")
-            print("-" * 30)
-        print("--- Test Finished ---")

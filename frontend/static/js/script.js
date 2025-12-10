@@ -35,6 +35,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
   initTheme();
 
+  // Connect to WebSocket
+  // Make sure the Socket.IO client script is loaded in your HTML
+  const socket = io();
+
   // --- STATE ---
   let state = {
     products: [],
@@ -62,7 +66,42 @@ document.addEventListener("DOMContentLoaded", () => {
     "product-modal-template"
   );
 
-  let statusPollInterval = null;
+  // --- WEBSOCKET LISTENERS ---
+
+  socket.on("connect", () => {
+    console.log("WebSocket connected!");
+  });
+
+  // Receive Chat/System Logs Instantly
+  socket.on("new_log", (log) => {
+    const entry = document.createElement("div");
+    entry.className = "log-entry";
+
+    if (log.type === "chat") {
+      entry.innerHTML = `<span class="user">${log.user}:</span> ${log.message}`;
+      chatLogContent.appendChild(entry);
+      chatLogContent.scrollTop = chatLogContent.scrollHeight;
+    } else {
+      entry.innerHTML = `<span class="action-success">[${log.time}]</span> ${log.message}`;
+      actionLogContent.appendChild(entry);
+      actionLogContent.scrollTop = actionLogContent.scrollHeight;
+    }
+  });
+
+  // Receive Stats Updates
+  socket.on("stats_update", (stats) => {
+    if (stats) {
+      // You might need to add specific IDs to your stats HTML elements if they aren't there
+      // Or traverse the DOM like this:
+      const statValues = document.querySelectorAll(".stat-value");
+      if (statValues.length >= 4) {
+        statValues[0].textContent = stats.comments_processed;
+        statValues[1].textContent = stats.scenes_switched;
+        statValues[2].textContent = 0; // Cache hits (optional to track now)
+        statValues[3].textContent = stats.errors;
+      }
+    }
+  });
 
   // --- HELPER: TOASTS ---
   const showToast = (message, type = "success") => {
@@ -73,88 +112,52 @@ document.addEventListener("DOMContentLoaded", () => {
     setTimeout(() => toast.remove(), 4000);
   };
 
-  // --- HELPER: RENDER LOGS (NEW) ---
-  const renderLogs = (logs) => {
-    if (!logs || !Array.isArray(logs)) return;
-
-    // Clear current logs to avoid duplication
-    // (The backend sends the full recent history every poll)
-    chatLogContent.innerHTML = "";
-    actionLogContent.innerHTML = "";
-
-    // The logs come in [Oldest, ..., Newest].
-    // Our CSS uses 'flex-direction: column-reverse', so the last DOM element
-    // appears at the TOP of the container visually.
-    logs.forEach((log) => {
-      const entry = document.createElement("div");
-      entry.className = "log-entry";
-
-      if (log.type === "chat") {
-        entry.innerHTML = `<span class="user">${log.user}:</span> ${log.message}`;
-        chatLogContent.appendChild(entry);
-      } else {
-        // System/Action log
-        entry.innerHTML = `<span class="action-success">[${log.time}]</span> ${log.message}`;
-        actionLogContent.appendChild(entry);
-      }
-    });
-  };
-
-  // --- API POLL ---
-  const fetchStatusAndLogs = async () => {
+  // --- CONTROL LOGIC ---
+  const toggleBot = async (action) => {
     try {
-      const response = await fetch("/api/status");
-      if (!response.ok) return;
-      const data = await response.json();
+      const res = await fetch("/api/control", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action }),
+      });
+      const data = await res.json();
 
-      // Update UI State
-      state.isRunning = data.running;
-      startButton.disabled = state.isRunning;
-      stopButton.disabled = !state.isRunning;
-
-      const badge = document.getElementById("bot-status-badge");
-      badge.textContent = state.isRunning ? "Running" : "Stopped";
-      badge.className = `status-badge ${
-        state.isRunning ? "status-badge-active" : "status-badge-inactive"
-      }`;
-
-      // Simulating connection statuses based on bot state (since we don't have granular flags yet)
-      const tiktokBadge = document.getElementById("tiktok-status-badge");
-      const obsBadge = document.getElementById("obs-status-badge");
-
-      if (state.isRunning) {
-        tiktokBadge.textContent = "Active";
-        tiktokBadge.className = "status-badge status-badge-active";
-        obsBadge.textContent = "Active";
-        obsBadge.className = "status-badge status-badge-active";
+      if (data.status === "success") {
+        showToast(data.message, "success");
+        // Update local state based on action
+        state.isRunning = action === "start";
+        updateUIState();
       } else {
-        tiktokBadge.textContent = "Offline";
-        tiktokBadge.className = "status-badge status-badge-inactive";
-        obsBadge.textContent = "Offline";
-        obsBadge.className = "status-badge status-badge-inactive";
+        showToast(data.message, "error");
       }
-
-      // Update Stats
-      if (data.stats) {
-        document.getElementById("statsContainer").innerHTML = `
-         <div class="stats-mini-grid">
-            <div class="stat-box"><span class="stat-label">Comments</span><span class="stat-value">${data.stats.comments_processed}</span></div>
-            <div class="stat-box"><span class="stat-label">Switches</span><span class="stat-value">${data.stats.scenes_switched}</span></div>
-            <div class="stat-box"><span class="stat-label">Cache Hits</span><span class="stat-value">${data.stats.cache_hits}</span></div>
-            <div class="stat-box"><span class="stat-label">Errors</span><span class="stat-value">${data.stats.errors}</span></div>
-         </div>`;
-      }
-
-      // Update Logs (The missing piece!)
-      if (data.logs) {
-        renderLogs(data.logs);
-      }
-    } catch (error) {
-      console.error("Polling failed:", error);
+    } catch (e) {
+      showToast("Connection failed", "error");
     }
   };
 
-  // --- PRODUCT & SETTINGS LOGIC ---
+  const updateUIState = () => {
+    startButton.disabled = state.isRunning;
+    stopButton.disabled = !state.isRunning;
+
+    const badge = document.getElementById("bot-status-badge");
+    badge.textContent = state.isRunning ? "Running" : "Stopped";
+    badge.className = `status-badge ${
+      state.isRunning ? "status-badge-active" : "status-badge-inactive"
+    }`;
+  };
+
+  const checkInitialStatus = async () => {
+    try {
+      const res = await fetch("/api/status");
+      const data = await res.json();
+      state.isRunning = data.running;
+      updateUIState();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  // --- PRODUCT & SETTINGS LOGIC (Unchanged) ---
   const saveAllToBackend = async (silent = false) => {
     const saveBtn = document.getElementById("saveSettingsBtn");
     if (!silent) {
@@ -173,7 +176,6 @@ document.addEventListener("DOMContentLoaded", () => {
         comment_rate_limit: document.getElementById("rate_limit").value,
         tiktok_reconnect_delay:
           document.getElementById("reconnect_delay").value,
-        cache_duration_seconds: document.getElementById("cache_duration").value,
         products: state.products,
       };
 
@@ -246,7 +248,6 @@ document.addEventListener("DOMContentLoaded", () => {
       .querySelector("#modal-cancel")
       .addEventListener("click", closeModal);
 
-    // Save Handler (Immediate DB Save)
     saveBtn.addEventListener("click", async () => {
       if (!nameInput.value || !sceneInput.value)
         return showToast("Required fields missing", "error");
@@ -285,8 +286,6 @@ document.addEventListener("DOMContentLoaded", () => {
         data.comment_rate_limit || 2;
       document.getElementById("reconnect_delay").value =
         data.tiktok_reconnect_delay || 30;
-      document.getElementById("cache_duration").value =
-        data.cache_duration_seconds || 300;
 
       state.products = data.products || [];
       renderProducts();
@@ -295,7 +294,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
-  // --- LISTENERS ---
+  // --- EVENT LISTENERS ---
   sidebar.addEventListener("click", (e) => {
     const navItem = e.target.closest(".nav-item");
     if (!navItem) return;
@@ -309,47 +308,18 @@ document.addEventListener("DOMContentLoaded", () => {
     );
   });
 
-  startButton.addEventListener("click", async () => {
-    try {
-      const res = await fetch("/api/start", { method: "POST" });
-      const data = await res.json();
-      if (res.ok) {
-        showToast(data.message, "success");
-        fetchStatusAndLogs();
-      } else {
-        showToast(data.message, "error");
-      }
-    } catch (e) {
-      showToast("Failed to start", "error");
-    }
-  });
-
-  stopButton.addEventListener("click", async () => {
-    try {
-      const res = await fetch("/api/stop", { method: "POST" });
-      const data = await res.json();
-      if (res.ok) {
-        showToast(data.message, "success");
-        fetchStatusAndLogs();
-      } else {
-        showToast(data.message, "error");
-      }
-    } catch (e) {
-      showToast("Failed to stop", "error");
-    }
-  });
-
+  startButton.addEventListener("click", () => toggleBot("start"));
+  stopButton.addEventListener("click", () => toggleBot("stop"));
   addProductBtn.addEventListener("click", () => showProductModal());
 
   productsContainer.addEventListener("click", async (e) => {
     const editBtn = e.target.closest(".btn-edit");
     const deleteBtn = e.target.closest(".btn-delete");
 
-    if (editBtn) {
+    if (editBtn)
       showProductModal(
         parseInt(editBtn.closest(".product-item").dataset.index)
       );
-    }
     if (deleteBtn && confirm("Delete product?")) {
       state.products.splice(
         parseInt(deleteBtn.closest(".product-item").dataset.index),
@@ -368,6 +338,5 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Init
   loadSettings();
-  fetchStatusAndLogs();
-  statusPollInterval = setInterval(fetchStatusAndLogs, 3000);
+  checkInitialStatus();
 });
