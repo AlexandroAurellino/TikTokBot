@@ -5,7 +5,7 @@
   --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     sans-serif;
 
-  /* Theming (Dark Mode) */
+  /* Dark Mode (Default) */
   --background: hsl(240 10% 3.9%);
   --foreground: hsl(0 0% 98%);
   --card: hsl(240 5.9% 10%);
@@ -30,6 +30,29 @@
   /* Custom Status Colors */
   --status-active: hsl(142 71% 45%);
   --status-inactive: hsl(0 72% 51%);
+}
+
+/* Light Mode */
+[data-theme="light"] {
+  --background: hsl(0 0% 98%);
+  --foreground: hsl(240 10% 3.9%);
+  --card: hsl(0 0% 100%);
+  --card-foreground: hsl(240 10% 3.9%);
+  --popover: hsl(0 0% 100%);
+  --popover-foreground: hsl(240 10% 3.9%);
+  --primary: hsl(48 95% 58%);
+  --primary-foreground: hsl(240 10% 3.9%);
+  --secondary: hsl(240 5.3% 91%);
+  --secondary-foreground: hsl(240 10% 3.9%);
+  --muted: hsl(240 2.4% 64.9%);
+  --muted-foreground: hsl(240 3.7% 45.9%);
+  --accent: hsl(240 5.3% 91%);
+  --accent-foreground: hsl(240 10% 3.9%);
+  --destructive: hsl(0 84% 60%);
+  --destructive-foreground: hsl(0 0% 100%);
+  --border: hsl(240 5.9% 90%);
+  --input: hsl(240 5.9% 90%);
+  --ring: hsl(48 95% 58%);
 }
 
 *,
@@ -67,6 +90,12 @@ body {
 .sidebar-header {
   padding: 1.5rem;
   border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.sidebar-header-content {
+  flex: 1;
 }
 .sidebar-logo {
   display: flex;
@@ -233,6 +262,28 @@ body {
 .btn-icon-only:hover:not(:disabled) {
   background-color: var(--accent);
   color: var(--foreground);
+}
+.btn-theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background-color: transparent;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s;
+}
+.btn-theme-toggle:hover {
+  background-color: var(--accent);
+  color: var(--foreground);
+}
+.theme-toggle-icon {
+  width: 18px;
+  height: 18px;
+  stroke-width: 2;
 }
 
 .form-group {
