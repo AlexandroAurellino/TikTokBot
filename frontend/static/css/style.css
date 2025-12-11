@@ -506,7 +506,7 @@ p.page-description,
 .form-textarea {
   width: 100%;
   padding: 0.5rem 0.75rem;
-  background-color: transparent;
+  background-color: var(--muted);
   border: 1px solid var(--input);
   border-radius: var(--radius);
   color: var(--foreground);
@@ -518,6 +518,18 @@ p.page-description,
   border-color: var(--ring);
   box-shadow: 0 0 0 1px var(--ring);
 }
+
+/* Number input spinner buttons */
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
 .form-textarea {
   min-height: 100px;
   resize: vertical;
@@ -642,11 +654,11 @@ p.page-description,
 .product-item {
   padding: 1.25rem;
   /* Use the exact color of the 'Active' sidebar item */
-  background-color: oklch(var(--accent));
-  color: oklch(var(--accent-foreground));
+  background-color: var(--muted);
+  color: var(--muted-foreground);
 
   /* Subtle border to keep it sharp */
-  border: 1px solid oklch(var(--border));
+  border: 1px solid var(--border);
   border-radius: var(--radius);
   margin-bottom: 1rem;
 
