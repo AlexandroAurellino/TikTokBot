@@ -8,7 +8,7 @@
 
   --background: oklch(1 0 0);
   --foreground: oklch(0.141 0.005 285.823);
-  --card: oklch(1 0 0);
+  --card: oklch(0.985 0 0);
   --card-foreground: oklch(0.141 0.005 285.823);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.141 0.005 285.823);
@@ -670,9 +670,8 @@ input[type="number"]::-webkit-outer-spin-button {
 }
 
 .product-item:hover {
-  /* Slightly brighten on hover */
-  filter: brightness(1.1);
-  border-color: oklch(var(--ring) / 0.5);
+  /* Only change border on hover */
+  border-color: var(--ring);
   box-shadow: 0 4px 12px -4px rgba(0, 0, 0, 0.3);
   transform: translateY(-2px);
 }
