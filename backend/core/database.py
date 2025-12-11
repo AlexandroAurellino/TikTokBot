@@ -1,13 +1,17 @@
-#backend/database.py
-
-print("!!! DATABASE MODULE LOADED SUCCESSFULLY !!!")
 import sqlite3
 import logging
-import json
 from pathlib import Path
+import sys
+import os
 
-# Define the database file path
-DB_PATH = Path(__file__).parent.parent / 'app.db'
+# Add parent directory to path to allow importing config
+sys.path.append(str(Path(__file__).parent.parent))
+
+try:
+    from config import DB_PATH
+except ImportError:
+    # Fallback if running directly
+    DB_PATH = Path(__file__).parent.parent.parent / 'app.db'
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -39,13 +43,6 @@ def init_db():
         )
     ''')
     
-    # Migration check
-    try:
-        c.execute('SELECT description FROM products LIMIT 1')
-    except sqlite3.OperationalError:
-        print("⚠️ upgrading database schema: adding description column")
-        c.execute('ALTER TABLE products ADD COLUMN description TEXT')
-
     # Defaults
     defaults = {
         "tiktok_username": "@username",
@@ -55,8 +52,7 @@ def init_db():
         "obs_ws_port": "4455",
         "obs_ws_password": "",
         "comment_rate_limit": "2",
-        "tiktok_reconnect_delay": "30",
-        "cache_duration_seconds": "300"
+        "tiktok_reconnect_delay": "30"
     }
     
     c.execute('SELECT count(*) FROM settings')
@@ -85,7 +81,6 @@ def load_settings():
         config['obs_ws_port'] = int(config.get('obs_ws_port', 4455))
         config['comment_rate_limit'] = int(config.get('comment_rate_limit', 2))
         config['tiktok_reconnect_delay'] = int(config.get('tiktok_reconnect_delay', 30))
-        config['cache_duration_seconds'] = int(config.get('cache_duration_seconds', 300))
     except ValueError:
         pass 
 
@@ -93,21 +88,16 @@ def load_settings():
     for row in db_products:
         products_list_obj.append({
             "name": row['name'],
-            "scene": row['scene'],
+            "scene": row['scene'], # This is now the FILENAME
             "description": row['description'] if row['description'] else ""
         })
     config['products'] = products_list_obj
     config['product_list'] = [p['name'] for p in products_list_obj]
-    config['product_to_scene_map'] = {p['name']: p['scene'] for p in products_list_obj}
     
     return config
 
 def save_settings(data):
     """Saves settings and products to the database."""
-    print("\n" + "="*50)
-    print("----- DEBUG: BACKEND RECEIVED DATA -----")
-    print(f"KEYS RECEIVED: {list(data.keys())}")
-    
     conn = get_db_connection()
     c = conn.cursor()
     
@@ -116,7 +106,7 @@ def save_settings(data):
         keys_to_save = [
             "tiktok_username", "deepseek_api_key", "main_scene_name",
             "obs_ws_host", "obs_ws_port", "obs_ws_password",
-            "comment_rate_limit", "tiktok_reconnect_delay", "cache_duration_seconds"
+            "comment_rate_limit", "tiktok_reconnect_delay"
         ]
         
         for key in keys_to_save:
@@ -126,28 +116,17 @@ def save_settings(data):
         
         # 2. Update Products
         if 'products' in data:
-            incoming_products = data['products']
-            print(f"DEBUG: Found 'products' key. Count: {len(incoming_products)}")
-            
             c.execute('DELETE FROM products')
-            
-            for prod in incoming_products:
+            for prod in data['products']:
                 name = prod.get('name')
                 scene = prod.get('scene')
-                # Debug print for EACH item
-                print(f"DEBUG: Processing Item -> {name} | {scene}")
-                
-                # Make sure we handle missing descriptions gracefully
                 desc = prod.get('description', '')
                 
                 if name and scene:
                     c.execute('INSERT INTO products (name, scene, description) VALUES (?, ?, ?)',
                               (name, scene, desc))
-        else:
-            print("DEBUG: 'products' key MISSING in data")
 
         conn.commit()
-        print("----- DEBUG: SAVE COMPLETE -----\n" + "="*50 + "\n")
         return True
     except Exception as e:
         logging.error(f"Database save error: {e}")

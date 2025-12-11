@@ -1,0 +1,103 @@
+<div id="settings" class="page">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Settings</h1>
+      <p class="page-description">Configure connections and credentials.</p>
+    </div>
+  </div>
+  <form id="settingsForm" class="settings-grid">
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">Core Credentials</h3>
+      </div>
+      <div class="card-content">
+        <div class="form-group">
+          <label class="form-label" for="tiktok_username">TikTok Username</label
+          ><input
+            type="text"
+            id="tiktok_username"
+            class="form-input"
+            placeholder="@username"
+            required
+          />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="deepseek_api_key"
+            >DeepSeek API Key</label
+          ><input
+            type="password"
+            id="deepseek_api_key"
+            class="form-input"
+            required
+          />
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">OBS Studio Connection</h3>
+      </div>
+      <div class="card-content">
+        <div class="form-group">
+          <label class="form-label" for="main_scene_name">Main Scene Name</label
+          ><input
+            type="text"
+            id="main_scene_name"
+            class="form-input"
+            placeholder="e.g., Main Camera"
+            required
+          />
+          <p class="form-hint">Scene to return to after video ends.</p>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="obs_ws_host">Host</label
+            ><input type="text" id="obs_ws_host" class="form-input" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="obs_ws_port">Port</label
+            ><input
+              type="number"
+              id="obs_ws_port"
+              class="form-input"
+              required
+            />
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="obs_ws_password">Password</label
+          ><input type="password" id="obs_ws_password" class="form-input" />
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">Performance Tuning</h3>
+      </div>
+      <div class="card-content">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="rate_limit"
+              >Rate Limit (req/min)</label
+            ><input type="number" id="rate_limit" class="form-input" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="reconnect_delay"
+              >Reconnect (sec)</label
+            ><input
+              type="number"
+              id="reconnect_delay"
+              class="form-input"
+              required
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button type="submit" id="saveSettingsBtn" class="btn btn-primary">
+        Save Settings
+      </button>
+    </div>
+  </form>
+</div>

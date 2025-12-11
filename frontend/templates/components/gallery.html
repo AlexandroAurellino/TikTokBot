@@ -1,0 +1,44 @@
+<div id="gallery" class="page">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Video Gallery</h1>
+      <p class="page-description">
+        Upload your product videos here. The app will swap these into the
+        'Product_View' scene.
+      </p>
+    </div>
+    <label class="btn btn-primary" style="cursor: pointer">
+      <input
+        type="file"
+        id="videoUploadInput"
+        accept="video/mp4,video/mov,video/webm"
+        style="display: none"
+      />
+      <svg
+        class="btn-icon"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+      >
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+        <polyline points="17 8 12 3 7 8"></polyline>
+        <line x1="12" y1="3" x2="12" y2="15"></line>
+      </svg>
+      Upload Video
+    </label>
+  </div>
+  <div class="card">
+    <div class="card-content">
+      <div
+        id="galleryGrid"
+        style="
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+          gap: 1rem;
+        "
+      >
+        <!-- Videos injected by JS -->
+      </div>
+    </div>
+  </div>
+</div>

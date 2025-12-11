@@ -1,0 +1,80 @@
+<div id="modalContainer"></div>
+
+<template id="product-item-template">
+  <div class="product-item">
+    <div class="product-item-header">
+      <div>
+        <div class="product-item-name"></div>
+        <div class="product-item-scene"></div>
+      </div>
+      <div class="product-item-actions">
+        <!-- NEW PLAY BUTTON -->
+        <button
+          class="btn btn-icon-only btn-play"
+          title="Play Now"
+          style="color: var(--primary)"
+        >
+          <svg
+            class="btn-icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+          >
+            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+          </svg>
+        </button>
+        <!-- Existing buttons -->
+        <button class="btn btn-icon-only btn-edit">...</button>
+        <button class="btn btn-icon-only btn-destructive btn-delete">
+          ...
+        </button>
+      </div>
+    </div>
+    <div class="product-item-description"></div>
+  </div>
+</template>
+
+<template id="product-modal-template">
+  <div class="modal-overlay">
+    <div class="modal">
+      <div class="modal-header"><h2 class="modal-title"></h2></div>
+      <div class="modal-content">
+        <div class="form-group">
+          <label class="form-label" for="modal-product-name">Product Name</label
+          ><input
+            type="text"
+            id="modal-product-name"
+            class="form-input"
+            placeholder="e.g., Cosmic Glow Lamp"
+            required
+          />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="modal-product-scene">Video File</label
+          ><input
+            type="text"
+            id="modal-product-scene"
+            class="form-input"
+            placeholder="Select from Gallery..."
+            disabled
+          />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="modal-product-description"
+            >AI Keywords</label
+          ><textarea
+            id="modal-product-description"
+            class="form-textarea"
+            placeholder="lamp, light, colorful..."
+          ></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" id="modal-cancel">Cancel</button
+        ><button class="btn btn-primary" id="modal-save">Save Product</button>
+      </div>
+    </div>
+  </div>
+</template>
+
+<div id="toastContainer" class="toast-container"></div>
