@@ -1,8 +1,8 @@
 <div id="dashboard" class="page active">
   <div class="page-header">
     <div>
-      <h1 style="font-size: 1.875rem; font-weight: 700">Dashboard</h1>
-      <p class="text-muted">Manage your live stream automation.</p>
+      <h1 class="page-title">Dashboard</h1>
+      <p class="page-description">Manage your live stream automation.</p>
     </div>
   </div>
 
@@ -12,11 +12,11 @@
       <!-- Top Stats Row -->
       <div class="stats-row">
         <div class="stat-card">
-          <div class="stat-label">Comments</div>
+          <div class="stat-label">Comments Processed</div>
           <div class="stat-value" id="stat-comments">0</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">Switches</div>
+          <div class="stat-label">Scene Switches</div>
           <div class="stat-value" id="stat-switches">0</div>
         </div>
         <div class="stat-card">
@@ -24,15 +24,11 @@
           <div class="stat-value" id="stat-errors">0</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">Status</div>
+          <div class="stat-label">Bot Status</div>
           <div
             class="stat-value"
             id="bot-status-text"
-            style="
-              font-size: 1rem;
-              margin-top: 0.5rem;
-              color: var(--muted-foreground);
-            "
+            style="font-size: 1.25rem; margin-top: 0.5rem"
           >
             Stopped
           </div>
@@ -44,113 +40,82 @@
         <div class="card-header">
           <h3 class="card-title">System Controls</h3>
         </div>
-        <div class="card-content" style="display: flex; gap: 1rem">
-          <button id="startButton" class="btn btn-primary" style="flex: 1">
-            <svg
-              class="btn-icon"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
+        <div class="card-content">
+          <div style="display: flex; gap: 0.75rem">
+            <button id="startButton" class="btn btn-primary" style="flex: 1">
+              <svg
+                class="btn-icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <polygon points="5 3 19 12 5 21 5 3"></polygon>
+              </svg>
+              Start Bot
+            </button>
+            <button
+              id="stopButton"
+              class="btn btn-destructive"
+              style="flex: 1"
+              disabled
             >
-              <polygon points="5 3 19 12 5 21 5 3"></polygon>
-            </svg>
-            Start Bot
-          </button>
-          <button
-            id="stopButton"
-            class="btn btn-destructive"
-            style="flex: 1"
-            disabled
-          >
-            <svg
-              class="btn-icon"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-            >
-              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-            </svg>
-            Stop Bot
-          </button>
+              <svg
+                class="btn-icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+              </svg>
+              Stop Bot
+            </button>
+          </div>
         </div>
       </div>
 
       <!-- Now Playing & Queue -->
-      <div class="card" style="flex: 1">
-        <div
-          class="card-header"
-          style="
-            flex-direction: row;
-            align-items: center;
-            justify-content: space-between;
-          "
-        >
+      <div class="card" style="flex: 1; min-height: 0">
+        <div class="card-header">
           <h3 class="card-title">Broadcast Queue</h3>
           <button
             id="skipButton"
             class="btn btn-outline"
-            style="height: 2rem; font-size: 0.75rem"
+            style="height: 2rem; padding: 0 0.75rem; font-size: 0.75rem"
           >
-            Skip Video
+            <svg
+              style="width: 14px; height: 14px; margin-right: 0.375rem"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <polygon points="5 4 15 12 5 20 5 4"></polygon>
+              <line x1="19" y1="5" x2="19" y2="19"></line>
+            </svg>
+            Skip
           </button>
         </div>
         <div class="card-content">
           <!-- Now Playing -->
           <div style="margin-bottom: 1.5rem">
-            <div
-              class="text-xs text-muted"
-              style="
-                margin-bottom: 0.5rem;
-                font-weight: 600;
-                text-transform: uppercase;
-              "
-            >
-              Now Playing
+            <div class="badge badge-primary" style="margin-bottom: 0.75rem">
+              NOW PLAYING
             </div>
-            <div
-              id="currentProductDisplay"
-              style="
-                padding: 1rem;
-                border: 1px solid var(--primary);
-                background-color: hsla(221.2, 83.2%, 53.3%, 0.1);
-                border-radius: var(--radius);
-                color: var(--primary);
-                font-weight: 600;
-                display: flex;
-                align-items: center;
-                gap: 0.5rem;
-              "
-            >
-              <span
-                style="
-                  width: 8px;
-                  height: 8px;
-                  background: var(--primary);
-                  border-radius: 50%;
-                  display: inline-block;
-                  animation: pulse 2s infinite;
-                "
-              ></span>
+            <div id="currentProductDisplay" class="now-playing-badge">
+              <span class="pulse-dot"></span>
               <span id="now-playing-text">Idle - Waiting for requests...</span>
             </div>
           </div>
 
           <!-- Queue List -->
           <div>
-            <div
-              class="text-xs text-muted"
-              style="
-                margin-bottom: 0.5rem;
-                font-weight: 600;
-                text-transform: uppercase;
-              "
-            >
-              Up Next
-            </div>
+            <div class="badge" style="margin-bottom: 0.75rem">UP NEXT</div>
             <div id="queueList">
               <div
                 class="text-muted text-sm"
-                style="font-style: italic; padding: 0.5rem 0"
+                style="font-style: italic; padding: 1rem 0; text-align: center"
               >
                 Queue is empty
               </div>
@@ -164,20 +129,56 @@
     <div class="dashboard-right">
       <div class="tabs">
         <div class="tabs-list">
-          <div
+          <button
             class="tab-trigger"
             data-state="active"
             onclick="switchTab('chat')"
           >
+            <svg
+              style="
+                width: 16px;
+                height: 16px;
+                margin-right: 0.5rem;
+                display: inline-block;
+              "
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path
+                d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
+              ></path>
+            </svg>
             Live Chat
-          </div>
-          <div
+          </button>
+          <button
             class="tab-trigger"
             data-state="inactive"
             onclick="switchTab('logs')"
           >
+            <svg
+              style="
+                width: 16px;
+                height: 16px;
+                margin-right: 0.5rem;
+                display: inline-block;
+              "
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path
+                d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+              ></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+              <polyline points="10 9 9 9 8 9"></polyline>
+            </svg>
             System Logs
-          </div>
+          </button>
         </div>
 
         <!-- Chat Content -->
@@ -194,35 +195,18 @@
   </div>
 </div>
 
-<style>
-  @keyframes pulse {
-    0% {
-      opacity: 1;
-    }
-    50% {
-      opacity: 0.5;
-    }
-    100% {
-      opacity: 1;
-    }
-  }
-</style>
-
 <script>
-  // Simple Tab Switcher Logic embedded for speed
+  // Tab Switcher
   function switchTab(tabName) {
-    // Reset triggers
     document
       .querySelectorAll(".tab-trigger")
       .forEach((el) => el.setAttribute("data-state", "inactive"));
-    // Reset contents
     document
       .querySelectorAll(".tab-content")
       .forEach((el) => el.setAttribute("data-state", "inactive"));
 
-    // Activate selected
     const trigger = document.querySelector(
-      `.tab-trigger[onclick="switchTab('${tabName}')"]`
+      `.tab-trigger[onclick*="'${tabName}'"]`
     );
     const content = document.getElementById(`tab-${tabName}`);
 

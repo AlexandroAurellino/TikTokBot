@@ -39,7 +39,6 @@ export const Dashboard = {
 
     const appendAndScroll = (container, html) => {
       if (!container) return;
-      // Auto-scroll logic: if user is near bottom
       const isScrolledToBottom =
         container.scrollHeight - container.scrollTop - container.clientHeight <
         100;
@@ -59,7 +58,7 @@ export const Dashboard = {
     this.socket.on("new_log", (log) => {
       const timeStr = `<span class="log-time">[${log.time}]</span>`;
       if (log.type === "chat") {
-        const html = `${timeStr} <span style="font-weight:600; color:var(--primary);">${log.user}:</span> ${log.message}`;
+        const html = `${timeStr} <span style="font-weight:600; color:hsl(var(--primary));">${log.user}:</span> ${log.message}`;
         appendAndScroll(chatLog, html);
       } else {
         const html = `${timeStr} ${log.message}`;
@@ -70,7 +69,7 @@ export const Dashboard = {
     this.socket.on("stats_update", (stats) => {
       if (!stats) return;
 
-      // Update Stats by specific IDs
+      // Update Stats
       const elComments = document.getElementById("stat-comments");
       const elSwitches = document.getElementById("stat-switches");
       const elErrors = document.getElementById("stat-errors");
@@ -79,26 +78,21 @@ export const Dashboard = {
       if (elSwitches) elSwitches.textContent = stats.scenes_switched;
       if (elErrors) elErrors.textContent = stats.errors;
 
-      // Update Now Playing
+      // Update Now Playing with new design
       const nowPlayingText = document.getElementById("now-playing-text");
       const nowPlayingBox = document.getElementById("currentProductDisplay");
 
-      if (nowPlayingText) {
+      if (nowPlayingText && nowPlayingBox) {
         if (stats.current_product) {
           nowPlayingText.textContent = stats.current_product;
-          nowPlayingBox.style.borderColor = "var(--primary)";
-          nowPlayingBox.style.backgroundColor =
-            "hsla(221.2, 83.2%, 53.3%, 0.1)";
-          nowPlayingBox.style.color = "var(--primary)";
+          nowPlayingBox.classList.remove("idle");
         } else {
-          nowPlayingText.textContent = "Idle - Waiting...";
-          nowPlayingBox.style.borderColor = "var(--border)";
-          nowPlayingBox.style.backgroundColor = "var(--background)";
-          nowPlayingBox.style.color = "var(--muted-foreground)";
+          nowPlayingText.textContent = "Idle - Waiting for requests...";
+          nowPlayingBox.classList.add("idle");
         }
       }
 
-      // Update Queue
+      // Update Queue with new design
       const queueList = document.getElementById("queueList");
       if (queueList) {
         queueList.innerHTML = "";
@@ -106,13 +100,14 @@ export const Dashboard = {
           stats.queue.forEach((item, index) => {
             const div = document.createElement("div");
             div.className = "queue-item";
-            div.innerHTML = `<span class="queue-number">${
-              index + 1
-            }</span> <span style="font-weight:500;">${item}</span>`;
+            div.innerHTML = `
+              <span class="queue-number">${index + 1}</span>
+              <span style="font-weight:500; flex: 1;">${item}</span>
+            `;
             queueList.appendChild(div);
           });
         } else {
-          queueList.innerHTML = `<div class="text-muted text-sm" style="font-style: italic; padding: 0.5rem 0;">Queue is empty</div>`;
+          queueList.innerHTML = `<div class="text-muted text-sm" style="font-style: italic; padding: 1rem 0; text-align: center;">Queue is empty</div>`;
         }
       }
     });
@@ -158,8 +153,8 @@ export const Dashboard = {
     if (statusText) {
       statusText.textContent = this.state.isRunning ? "Running" : "Stopped";
       statusText.style.color = this.state.isRunning
-        ? "var(--primary)"
-        : "var(--muted-foreground)";
+        ? "hsl(var(--primary))"
+        : "hsl(var(--muted-foreground))";
     }
   },
 };

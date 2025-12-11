@@ -10,6 +10,7 @@
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
+        stroke-width="2"
       >
         <path d="M5 12h14" />
         <path d="M12 5v14" />
@@ -17,6 +18,7 @@
       Add Product
     </button>
   </div>
+
   <div class="card">
     <div class="card-content" id="productsContainer"></div>
     <div class="empty-state" id="productsEmptyState">
@@ -25,18 +27,32 @@
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
+        stroke-width="1.5"
       >
         <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
         <path d="M3 6h18" />
         <path d="M16 10a4 4 0 0 1-8 0" />
       </svg>
-      <h3>No Products Found</h3>
-      <p>Add your first product to link it with a video.</p>
+      <h3>No Products Yet</h3>
+      <p>
+        Create your first product to link it with a video from your gallery.
+      </p>
       <button
-        class="btn btn-outline"
+        class="btn btn-primary"
         onclick="document.getElementById('addProductBtn').click()"
+        style="margin-top: 0.5rem"
       >
-        Add Product
+        <svg
+          class="btn-icon"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <path d="M5 12h14" />
+          <path d="M12 5v14" />
+        </svg>
+        Add Your First Product
       </button>
     </div>
   </div>

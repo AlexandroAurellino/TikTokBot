@@ -3,8 +3,8 @@
     <div>
       <h1 class="page-title">Video Gallery</h1>
       <p class="page-description">
-        Upload your product videos here. The app will swap these into the
-        'Product_View' scene.
+        Upload and manage your product videos. These will be displayed in your
+        live stream.
       </p>
     </div>
     <label class="btn btn-primary" style="cursor: pointer">
@@ -19,6 +19,7 @@
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
+        stroke-width="2"
       >
         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
         <polyline points="17 8 12 3 7 8"></polyline>
@@ -27,16 +28,10 @@
       Upload Video
     </label>
   </div>
+
   <div class="card">
     <div class="card-content">
-      <div
-        id="galleryGrid"
-        style="
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-          gap: 1rem;
-        "
-      >
+      <div id="galleryGrid">
         <!-- Videos injected by JS -->
       </div>
     </div>
